@@ -38,6 +38,11 @@ class EncoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model).double()
         self.dropout = nn.Dropout(dropout)
         self.activation = F.relu if activation == "relu" else F.gelu
+        if torch.cuda.is_available():
+            self.conv1 = self.conv1.cuda()
+            self.conv2 = self.conv2.cuda()
+            self.norm1 = self.norm1.cuda()
+            self.norm2 = self.norm2.cuda()
 
     def forward(self, x, attn_mask=None):
         # x [B, L, D]
