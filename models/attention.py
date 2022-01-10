@@ -254,6 +254,12 @@ class AttentionLayer(nn.Module):
         self.value_projection = nn.Linear(d_model, d_values * n_heads).double()
         self.out_projection = nn.Linear(d_values * n_heads, d_model).double()
         self.n_heads = n_heads
+        if torch.cuda.is_available():
+            self.inner_attention = self.inner_attention.cuda()
+            self.query_projection = self.query_projection.cuda()
+            self.key_projection = self.key_projection.cuda()
+            self.value_projection = self.value_projection.cuda()
+            self.out_projection = self.out_projection.cuda()
 
     def forward(self, queries, keys, values, attn_mask):
         B, L, _ = queries.shape

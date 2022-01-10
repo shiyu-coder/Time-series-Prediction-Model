@@ -14,8 +14,7 @@ class DenseFormer(nn.Module):
     def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len,
                  factor=5, d_model=512, n_heads=8, e_layers=4, d_layers=2, d_ff=512,
                  dropout=0.0, attn='prob', embed='fixed', freq='h', activation='gelu',
-                 output_attention=False, distil=True, L_d=64,
-                 device=torch.device('cuda:0')):
+                 output_attention=False, distil=True, L_d=64):
         super(DenseFormer, self).__init__()
         self.pred_len = out_len
         self.attn = attn
@@ -62,7 +61,7 @@ class DenseFormer(nn.Module):
         # dec_out = self.end_conv1(dec_out)
         # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
         if self.output_attention:
-            return dec_out[:, -self.pred_len:, :], attns
+            return dec_out[:, -self.pred_len:, :]
         else:
             return dec_out[:, -self.pred_len:, :]  # [B, L, D]
 

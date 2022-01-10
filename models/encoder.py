@@ -17,6 +17,10 @@ class ConvLayer(nn.Module):
         self.norm = nn.BatchNorm1d(c_in).double()
         self.activation = nn.ELU()
         self.maxPool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
+        if torch.cuda.is_available():
+            self.downConv = self.downConv.cuda()
+            self.norm = self.norm.cuda()
+            self.maxPool = self.maxPool.cuda()
 
     def forward(self, x):
         x = self.downConv(x.permute(0, 2, 1))
@@ -72,6 +76,12 @@ class FCEncoder(nn.Module):
         self.back_attn_layers = nn.ModuleList(back_attn_layers).double()
         self.back_conv_layers = nn.ModuleList(back_conv_layers).double() if back_conv_layers is not None else None
         self.norm = norm_layer.double()
+        if torch.cuda.is_available():
+            self.front_attn_layers = self.front_attn_layers.cuda()
+            self.front_conv_layers = self.front_conv_layers.cuda()
+            self.back_attn_layers = self.back_attn_layers.cuda()
+            self.back_conv_layers = self.back_conv_layers.cuda()
+            self.norm = self.norm.cuda()
 
     def forward(self, x, attn_mask=None):
         mid_outputs = []
@@ -121,7 +131,7 @@ class DFCE(nn.Module):
             self.activation = F.relu if activation == "relu" else F.gelu
         # Attention
         Attn = ProbAttention if attn == 'prob' else FullAttention
-        self.FCEs = [FCEncoder(
+        self.FCEs = nn.Sequential(*[FCEncoder(
             [
                 EncoderLayer(
                     AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=output_attention),
@@ -129,7 +139,7 @@ class DFCE(nn.Module):
                     d_model,
                     d_ff,
                     dropout=dropout,
-                    activation=activation
+                    activation=activation,
                 ) for l in range(e_layers)
             ],
             [
@@ -139,21 +149,21 @@ class DFCE(nn.Module):
                     d_model,
                     d_ff,
                     dropout=dropout,
-                    activation=activation
+                    activation=activation,
                 ) for l in range(e_layers)
             ],
             [
                 ConvLayer(
-                    d_model
+                    d_model,
                 ) for l in range(e_layers)
             ] if distil else None,
             [
                 ConvLayer(
-                    d_model
+                    d_model,
                 ) for l in range(e_layers)
             ] if distil else None,
-            norm_layer=torch.nn.LayerNorm(d_model)
-        ) for i in range(3)]
+            norm_layer=torch.nn.LayerNorm(d_model),
+        ) for i in range(3)])
 
     def forward(self, x, attn_mask=None):
         x1 = self.FCEs[0](x, attn_mask)
